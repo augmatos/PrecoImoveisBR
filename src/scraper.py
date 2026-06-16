@@ -28,7 +28,11 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE = "https://www.chavesnamao.com.br"
-LISTA_URL = BASE + "/imoveis-a-venda/{uf}-{cidade}/"
+# cada operação tem seu próprio caminho de listagem no site
+OPERACOES = {
+    "venda": "/imoveis-a-venda/{uf}-{cidade}/",
+    "aluguel": "/imoveis-para-alugar/{uf}-{cidade}/",
+}
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -119,9 +123,11 @@ def parse_card(card) -> dict | None:
             if chave in rotulo:
                 dados[coluna] = _num(rotulo)
 
-    # tipo e área total a partir da URL: /imovel/casa-a-venda-...-220m2-RS690000/
+    # tipo e área total a partir da URL:
+    #   venda:   /imovel/casa-a-venda-...-220m2-RS690000/
+    #   aluguel: /imovel/casa-para-alugar-...-220m2-RS3500/
     tipo = None
-    m_tipo = re.search(r"/imovel/([a-z-]+?)-a-venda", href)
+    m_tipo = re.search(r"/imovel/([a-z-]+?)-(?:a-venda|para-alugar)", href)
     if m_tipo:
         tipo = m_tipo.group(1).replace("-", " ")
     m_area = re.search(r"-(\d+)m2-", href)
@@ -129,6 +135,7 @@ def parse_card(card) -> dict | None:
 
     return {
         "id": card.get("id", "").replace("rc-", ""),
+        "operacao": None,  # preenchido por scrape_cidade
         "tipo": tipo,
         "preco": preco,
         "area_util": area_util,
@@ -145,8 +152,8 @@ def parse_card(card) -> dict | None:
     }
 
 
-def scrape_cidade(uf: str, cidade: str, max_paginas: int) -> list[dict]:
-    base_url = LISTA_URL.format(uf=uf.lower(), cidade=cidade.lower())
+def scrape_cidade(uf: str, cidade: str, operacao: str, max_paginas: int) -> list[dict]:
+    base_url = BASE + OPERACOES[operacao].format(uf=uf.lower(), cidade=cidade.lower())
     if not pode_coletar(base_url):
         raise SystemExit(f"[robots] coleta não permitida para {base_url}")
 
@@ -166,6 +173,7 @@ def scrape_cidade(uf: str, cidade: str, max_paginas: int) -> list[dict]:
         for card in cards:
             item = parse_card(card)
             if item and item["id"] and item["id"] not in vistos:
+                item["operacao"] = operacao
                 vistos.add(item["id"])
                 resultados.append(item)
                 novos += 1
@@ -176,9 +184,9 @@ def scrape_cidade(uf: str, cidade: str, max_paginas: int) -> list[dict]:
     return resultados
 
 
-def salvar_csv(linhas: list[dict], cidade: str) -> Path:
+def salvar_csv(linhas: list[dict], cidade: str, operacao: str) -> Path:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    arquivo = RAW_DIR / f"imoveis_{cidade.lower()}_{date.today():%Y%m%d}.csv"
+    arquivo = RAW_DIR / f"imoveis_{operacao}_{cidade.lower()}_{date.today():%Y%m%d}.csv"
     if not linhas:
         print("[aviso] nenhuma linha para salvar.")
         return arquivo
@@ -194,11 +202,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Scraper de imóveis do Chaves na Mão")
     ap.add_argument("--uf", default="to", help="UF, ex.: to, sp, rj")
     ap.add_argument("--cidade", default="palmas", help="Cidade, ex.: palmas")
+    ap.add_argument("--operacao", default="venda", choices=list(OPERACOES),
+                    help="venda ou aluguel")
     ap.add_argument("--max-paginas", type=int, default=30)
     args = ap.parse_args()
 
-    linhas = scrape_cidade(args.uf, args.cidade, args.max_paginas)
-    salvar_csv(linhas, args.cidade)
+    linhas = scrape_cidade(args.uf, args.cidade, args.operacao, args.max_paginas)
+    salvar_csv(linhas, args.cidade, args.operacao)
 
 
 if __name__ == "__main__":

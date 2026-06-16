@@ -1,6 +1,6 @@
-# 🏠 Previsão de Preços de Imóveis — Palmas/TO
+# 🏠 Mercado Imobiliário de Palmas/TO — Preço, Yield e Segmentação
 
-> Regressão supervisionada de preços de imóveis a partir de um dataset **coletado por web scraping próprio** do portal Chaves na Mão — da coleta do dado bruto à modelagem e avaliação.
+> Projeto ponta a ponta sobre um dataset **coletado por web scraping próprio** do portal Chaves na Mão: **regressão** de preços de venda, **yield** de aluguel por bairro e **segmentação** de imóveis por K-Means — da coleta do dado bruto à análise.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Projeto de **regressão supervisionada** ponta a ponta. Diferente de usar um dataset pronto do Kaggle, aqui **os dados são coletados por um scraper próprio** dos anúncios de imóveis à venda em Palmas/TO, o que torna o pipeline completo: coleta → limpeza → análise → modelagem → avaliação.
 
-O objetivo é prever o **preço de venda** de um imóvel a partir de suas características (área, número de quartos, banheiros, vagas de garagem, tipo e bairro).
+A análise tem três frentes: **(1)** prever o **preço de venda** a partir das características do imóvel (área, quartos, banheiros, vagas, tipo e bairro); **(2)** estimar o **yield de aluguel** por bairro (retorno de comprar para alugar); e **(3)** descobrir **segmentos de mercado** via clustering.
 
 ### Perguntas respondidas
 
@@ -35,9 +35,13 @@ de listagem de imóveis à venda e extrai os campos de cada anúncio.
 **Como coletar:**
 ```bash
 pip install -r requirements.txt
-python src/scraper.py --uf to --cidade palmas --max-paginas 100
-# Gera: data/raw/imoveis_palmas_AAAAMMDD.csv
+python src/scraper.py --uf to --cidade palmas --operacao venda   --max-paginas 100
+python src/scraper.py --uf to --cidade palmas --operacao aluguel --max-paginas 100
+# Gera: data/raw/imoveis_{venda|aluguel}_palmas_AAAAMMDD.csv
 ```
+
+O mesmo scraper coleta **venda** e **aluguel** (parâmetro `--operacao`), o que viabiliza a análise
+de yield e a comparação entre os dois mercados.
 
 ### Campos coletados
 
@@ -104,22 +108,57 @@ extrapolam** além do intervalo de treino, por isso são naturalmente robustos a
 
 ---
 
+## 🏙️ Yield de Aluguel e Segmentação de Mercado
+
+Combinando os dados de **venda** e **aluguel**, o notebook
+[`02_yield_segmentacao.ipynb`](notebooks/02_yield_segmentacao.ipynb) responde duas perguntas de negócio.
+
+### Em quais bairros comprar para alugar rende mais?
+
+**Yield bruto anual** = (aluguel mensal × 12) ÷ preço de venda, normalizado por m² e comparado pela
+mediana de cada bairro.
+
+![Yield por bairro](images/yield_bairro.png)
+
+> **Insight:** o bairro mais caro **não** é o que mais rende. **Graciosa/Orla 14** tem o maior
+> preço/m² (~R$ 13 mil) mas o **menor yield** (~6,8% a.a.); o **Plano Diretor Sul** entrega o melhor
+> retorno (~10% a.a.). Padrão clássico — áreas nobres se pagam pela valorização, não pela renda de
+> aluguel. *(O mercado de locação anunciado em Palmas é pequeno (~50 imóveis), então o yield é
+> direcional, robusto apenas para os bairros principais.)*
+
+### Quais segmentos naturais de imóveis existem?
+
+Clustering **K-Means** (log + padronização, *k* escolhido por cotovelo + silhueta) revela 4 faixas
+de mercado — sem regras manuais:
+
+![Segmentos de imóveis](images/segmentos_scatter.png)
+
+| Segmento | Perfil típico |
+|----------|---------------|
+| **Compacto / Entrada** | ~R$ 380 mil · 63 m² · 2 quartos |
+| **Padrão Médio** | ~R$ 680 mil · 120 m² · 3 quartos |
+| **Médio-Alto / Amplo** | ~R$ 1,2 mi · 187 m² · 3 quartos · 3 vagas |
+| **Alto Padrão** | ~R$ 3,3 mi · 305 m² · 4 quartos · R$ 12 mil/m² |
+
+---
+
 ## 📁 Estrutura do Projeto
 
 ```
 PrecoImoveisBR/
 │
 ├── src/
-│   └── scraper.py              # Coleta os anúncios do Chaves na Mão
+│   └── scraper.py                   # Coleta venda/aluguel do Chaves na Mão
 │
 ├── notebooks/
-│   └── 01_eda_modelagem.ipynb  # EDA + limpeza + regressão (em construção)
+│   ├── 01_eda_modelagem.ipynb       # EDA + limpeza + regressão de preço
+│   └── 02_yield_segmentacao.ipynb   # Yield por bairro + segmentação K-Means
 │
 ├── data/
-│   ├── raw/                    # CSVs coletados (não versionados)
-│   └── processed/              # Dataset limpo para modelagem
+│   ├── raw/                         # CSVs coletados (não versionados)
+│   └── processed/                   # Dataset limpo
 │
-├── images/                     # Gráficos exportados para o README
+├── images/                          # Gráficos exportados para o README
 ├── requirements.txt
 └── README.md
 ```
