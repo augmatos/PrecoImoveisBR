@@ -1,0 +1,33 @@
+{
+  "yield": {
+    "por_bairro": {
+      "Graciosa - Orla 14": 6.78,
+      "Plano Diretor Norte": 7.54,
+      "Plano Diretor Sul": 10.08
+    },
+    "cidade": 9.5
+  },
+  "bairros_conhecidos": [
+    "Arso",
+    "Graciosa - Orla 14",
+    "Jardim Aureny III (Taqualto)",
+    "Loteamento Bertaville",
+    "Loteamento Caribe",
+    "Plano Diretor Norte",
+    "Plano Diretor Sul"
+  ],
+  "tipos": [
+    "casa",
+    "apartamento",
+    "cobertura",
+    "flat",
+    "casa em condominio",
+    "sobrado"
+  ],
+  "segmentos": [
+    "Compacto / Entrada",
+    "Padrão Médio",
+    "Médio-Alto / Amplo",
+    "Alto Padrão"
+  ]
+}

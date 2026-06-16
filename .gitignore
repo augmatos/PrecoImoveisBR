@@ -12,10 +12,8 @@ env/
 data/raw/*.csv
 data/processed/*.csv
 
-# Modelos treinados
-models/
-*.pkl
-*.joblib
+# Modelos treinados: versionados (leves) para a API rodar logo após o clone.
+# Reproduzíveis com `python src/treinar_modelos.py` após coletar os dados.
 
 # Sistema
 .DS_Store

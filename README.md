@@ -142,17 +142,62 @@ de mercado — sem regras manuais:
 
 ---
 
+## 🔌 API REST (FastAPI)
+
+Os três modelos são servidos num único endpoint. A partir das características de um imóvel, a API
+estima o **preço**, classifica o **segmento de mercado** (usando o preço previsto) e retorna o
+**yield de aluguel** do bairro — fechando o pipeline: scraping → modelagem → serviço.
+
+```bash
+python src/treinar_modelos.py        # treina e salva os artefatos em models/
+uvicorn src.api:app --reload         # sobe a API
+# docs interativas (Swagger): http://localhost:8000/docs
+```
+
+**Exemplo:**
+```bash
+curl -X POST http://localhost:8000/prever -H "Content-Type: application/json" -d '{
+  "tipo": "casa", "area_util": 120, "quartos": 3,
+  "banheiros": 2, "vagas": 2, "bairro": "Plano Diretor Sul"
+}'
+```
+```json
+{
+  "preco_estimado": 706756.58,
+  "preco_m2_estimado": 5889.64,
+  "segmento": "Padrão Médio",
+  "yield_bairro_pct": 10.08,
+  "yield_e_da_cidade": false,
+  "bairro_conhecido": true
+}
+```
+
+| Rota | Método | Descrição |
+|------|--------|-----------|
+| `/prever` | POST | Preço estimado + segmento + yield do bairro |
+| `/bairros` | GET | Bairros conhecidos e yield disponível |
+| `/docs` | GET | Documentação interativa (Swagger UI) |
+
+Validação de entrada via **Pydantic**, documentação automática e fallback para bairros não vistos
+(usa o yield médio da cidade, sinalizado em `yield_e_da_cidade`).
+
+---
+
 ## 📁 Estrutura do Projeto
 
 ```
 PrecoImoveisBR/
 │
 ├── src/
-│   └── scraper.py                   # Coleta venda/aluguel do Chaves na Mão
+│   ├── scraper.py                   # Coleta venda/aluguel do Chaves na Mão
+│   ├── treinar_modelos.py           # Treina e serializa os artefatos da API
+│   └── api.py                       # API FastAPI (preço + segmento + yield)
 │
 ├── notebooks/
 │   ├── 01_eda_modelagem.ipynb       # EDA + limpeza + regressão de preço
 │   └── 02_yield_segmentacao.ipynb   # Yield por bairro + segmentação K-Means
+│
+├── models/                          # Artefatos treinados (.joblib + metadados.json)
 │
 ├── data/
 │   ├── raw/                         # CSVs coletados (não versionados)
