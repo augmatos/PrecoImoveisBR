@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dados brutos coletados (não versionar — reproduzir com o scraper)
+data/raw/*.csv
+data/processed/*.csv
+
+# Modelos treinados
+models/
+*.pkl
+*.joblib
+
+# Sistema
+.DS_Store
+Thumbs.db
